@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useInView, useScroll, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import {
   ArrowRight, Lightbulb, Speaker, Blinds, Thermometer, ShieldCheck, Wrench,
@@ -66,10 +66,77 @@ const testimonials = [
 
 export default function Home() {
   const heroRef = useRef(null)
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
-  const heroOpacity = useTransform(scrollYProgress, [0, 1], [1, 0])
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.15])
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 150])
+  const canvasRef = useRef(null)
+  
+  const { scrollYProgress } = useScroll() // Global scroll progress
+  
+  // Set up the canvas scrubber
+  const frameCount = 192
+  const images = useRef([])
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+
+  const drawFrame = (index) => {
+    if (!canvasRef.current || !images.current[index]) return
+    const ctx = canvasRef.current.getContext('2d', { alpha: false })
+    const img = images.current[index]
+    const canvas = canvasRef.current
+    const scale = Math.max(canvas.width / img.width, canvas.height / img.height)
+    const x = (canvas.width / 2) - (img.width / 2) * scale
+    const y = (canvas.height / 2) - (img.height / 2) * scale
+    ctx.fillStyle = '#0a0a0a'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, x, y, img.width * scale, img.height * scale)
+  }
+
+  useEffect(() => {
+    let loaded = 0
+    for (let i = 0; i < frameCount; i++) {
+      const img = new Image()
+      const formattedIndex = String(i).padStart(4, '0')
+      img.src = `${import.meta.env.BASE_URL}frames/frame-${formattedIndex}.jpg`
+      img.onload = () => {
+        loaded++
+        if (loaded === frameCount) setImagesLoaded(true)
+        if (i === 0) {
+          if (canvasRef.current) {
+            canvasRef.current.width = window.innerWidth
+            canvasRef.current.height = window.innerHeight
+            drawFrame(0)
+          }
+        }
+      }
+      images.current.push(img)
+    }
+
+    const resizeCanvas = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth
+        canvasRef.current.height = window.innerHeight
+        const progress = scrollYProgress.get()
+        const frameIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(progress * frameCount)))
+        if (images.current[frameIndex]?.complete) drawFrame(frameIndex)
+      }
+    }
+    window.addEventListener('resize', resizeCanvas)
+    return () => window.removeEventListener('resize', resizeCanvas)
+  }, [scrollYProgress])
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    if (!imagesLoaded) return
+    const frameIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(latest * frameCount)))
+    drawFrame(frameIndex)
+  })
+  
+  // Connect background parallax to the global scroll
+  const globalBgY = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
+  const globalBgScale = useTransform(scrollYProgress, [0, 1], [1, 1.1])
+  const globalBgOpacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 0.4, 0.05]) // Extremely visible on hero, fades deeply later
+  
+  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
+  const heroOpacity = useTransform(heroProgress, [0, 1], [1, 0])
+  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.15])
+  const heroY = useTransform(heroProgress, [0, 1], [0, 150])
+
   const [activeProject, setActiveProject] = useState(0)
 
   /* Auto-rotate projects */
@@ -86,11 +153,46 @@ export default function Home() {
       </Helmet>
 
       <CursorGlow />
+      
+      {/* ===== GLOBAL CINEMATIC BACKGROUND ===== */}
+      <motion.div 
+        className="global-background"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -2,
+          overflow: 'hidden',
+          backgroundColor: 'var(--color-bg-primary)'
+        }}
+      >
+        <motion.canvas 
+          ref={canvasRef}
+          style={{
+            width: '100%',
+            height: '120vh',
+            objectFit: 'cover',
+            opacity: globalBgOpacity,
+            scale: globalBgScale,
+            y: globalBgY,
+            filter: 'brightness(1)'
+          }}
+        />
+        {/* Adds a gradient mask so the edges fade into the dark background */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to bottom, rgba(10,10,10,0.1) 0%, var(--color-bg-primary) 100%)',
+          pointerEvents: 'none'
+        }} />
+      </motion.div>
 
       {/* ===== HERO ===== */}
       <section className="hero" ref={heroRef} id="hero">
         <motion.div className="hero__bg" style={{ scale: heroScale, opacity: heroOpacity }}>
-          <div className="hero__gradient" />
+          <div className="hero__glass-screen" />
           <div className="hero__grid-lines" />
           <div className="hero__particles">
             {[...Array(30)].map((_, i) => (
@@ -142,13 +244,11 @@ export default function Home() {
           </motion.div>
 
           <h1 className="hero__title">
-            <CharReveal delay={0.4}>Intelligent Automation for</CharReveal>
+            <span className="hero__title-line"><CharReveal delay={0.4}>The Future of</CharReveal></span>
             <br />
-            <span className="gradient-text">
-              <CharReveal delay={0.8}>Luxury Living</CharReveal>
+            <span className="hero__title-line hero__title-glow">
+              <CharReveal delay={0.8}>Smart Living.</CharReveal>
             </span>
-            <br />
-            <CharReveal delay={1.1}>& Smart Spaces</CharReveal>
           </h1>
 
           <BlurFade delay={1.4}>
