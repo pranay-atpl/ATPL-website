@@ -1,6 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useInView, useScroll, useTransform, AnimatePresence, useMotionValueEvent } from 'framer-motion'
+import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
 import { Helmet } from 'react-helmet-async'
 import {
   ArrowRight, Lightbulb, Speaker, Blinds, Thermometer, ShieldCheck, Wrench,
@@ -28,17 +31,17 @@ const services = [
 ]
 
 const projects = [
-  { name: 'The Ritz-Carlton, Pune', type: 'Hospitality', desc: 'Delivered a fully integrated automation system for a 120-room luxury hotel improving energy efficiency by 30%.', usps: ['120+ Rooms', 'Energy Savings 30%', 'Full Integration'] },
-  { name: 'Ambience Caitriona', type: 'Residential', desc: 'Ultra-premium residential automation across 200+ apartments with personalized scene control and whole-home integration.', usps: ['200+ Units', 'Scene Control', 'Custom UI'] },
-  { name: 'DLF Cyber Hub', type: 'Commercial', desc: 'Smart building automation for one of India\'s largest commercial hubs — lighting, HVAC, and security unified.', usps: ['50,000 sq.ft', 'BMS Integration', 'IoT Ready'] },
-  { name: 'ITC Grand Bharat', type: 'Hospitality', desc: 'Bespoke automation for India\'s only all-suite luxury resort, blending heritage with cutting-edge technology.', usps: ['All Suites', 'Heritage Design', 'Luxury Tech'] },
-  { name: 'Lodha Altamount', type: 'Residential', desc: 'Mumbai\'s most premium address automated with Lutron, Crestron. Each residence uniquely engineered.', usps: ['Ultra Luxury', 'Bespoke Design', 'Premium Brands'] },
+  { name: 'The Ritz-Carlton, Pune', type: 'Hospitality', desc: 'Delivered a fully integrated automation system for a 120-room luxury hotel improving energy efficiency by 30%.', usps: ['120+ Rooms', 'Energy Savings 30%', 'Full Integration'], img: '_PAB2918-HDR.jpg' },
+  { name: 'Ambience Caitriona', type: 'Residential', desc: 'Ultra-premium residential automation across 200+ apartments with personalized scene control and whole-home integration.', usps: ['200+ Units', 'Scene Control', 'Custom UI'], img: '_PAB2943-HDR.jpg' },
+  { name: 'DLF Cyber Hub', type: 'Commercial', desc: 'Smart building automation for one of India\'s largest commercial hubs — lighting, HVAC, and security unified.', usps: ['50,000 sq.ft', 'BMS Integration', 'IoT Ready'], img: '_PAB3085-HDR.jpg' },
+  { name: 'ITC Grand Bharat', type: 'Hospitality', desc: 'Bespoke automation for India\'s only all-suite luxury resort, blending heritage with cutting-edge technology.', usps: ['All Suites', 'Heritage Design', 'Luxury Tech'], img: '_PAB2990-HDR.jpg' },
+  { name: 'Lodha Altamount', type: 'Residential', desc: 'Mumbai\'s most premium address automated with Lutron, Crestron. Each residence uniquely engineered.', usps: ['Ultra Luxury', 'Bespoke Design', 'Premium Brands'], img: '_PAB2828-HDR.jpg' },
 ]
 
 const centers = [
-  { city: 'New Delhi', address: 'A-12, Green Park, New Delhi 110016', desc: 'Experience our flagship 3,000 sq.ft centre showcasing the latest in luxury automation.' },
-  { city: 'Mumbai', address: 'Unit 5, Trade Centre, BKC, Mumbai 400051', desc: 'Our western hub featuring immersive lighting and AV demonstrations.' },
-  { city: 'Bangalore', address: '2nd Floor, UB City, Vittal Mallya Rd, Bangalore', desc: 'South India\'s premier automation experience centre for designers and homeowners.' },
+  { city: 'New Delhi', address: 'A-12, Green Park, New Delhi 110016', desc: 'Experience our flagship 3,000 sq.ft centre showcasing the latest in luxury automation.', img: '_PAB2838-HDR.jpg' },
+  { city: 'Mumbai', address: 'Unit 5, Trade Centre, BKC, Mumbai 400051', desc: 'Our western hub featuring immersive lighting and AV demonstrations.', img: '_PAB2858-HDR.jpg' },
+  { city: 'Bangalore', address: '2nd Floor, UB City, Vittal Mallya Rd, Bangalore', desc: 'South India\'s premier automation experience centre for designers and homeowners.', img: '_PAB3110-HDR.jpg' },
 ]
 
 const usps = [
@@ -67,10 +70,12 @@ const testimonials = [
 export default function Home() {
   const heroRef = useRef(null)
   const canvasRef = useRef(null)
-  
-  const { scrollYProgress } = useScroll() // Global scroll progress
-  
-  // Set up the canvas scrubber
+  const homeRef = useRef(null)
+  const marqueeRef = useRef(null)
+  const processLineRef = useRef(null)
+
+  /* ===== Framer Motion: Canvas frame scrubber for global background ===== */
+  const { scrollYProgress } = useScroll()
   const frameCount = 192
   const images = useRef([])
   const [imagesLoaded, setImagesLoaded] = useState(false)
@@ -126,16 +131,11 @@ export default function Home() {
     const frameIndex = Math.min(frameCount - 1, Math.max(0, Math.floor(latest * frameCount)))
     drawFrame(frameIndex)
   })
-  
-  // Connect background parallax to the global scroll
+
+  // Framer Motion transforms for the canvas background parallax
   const globalBgY = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
   const globalBgScale = useTransform(scrollYProgress, [0, 1], [1, 1.1])
-  const globalBgOpacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 0.4, 0.05]) // Extremely visible on hero, fades deeply later
-  
-  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
-  const heroOpacity = useTransform(heroProgress, [0, 1], [1, 0])
-  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.15])
-  const heroY = useTransform(heroProgress, [0, 1], [0, 150])
+  const globalBgOpacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 0.4, 0.05])
 
   const [activeProject, setActiveProject] = useState(0)
 
@@ -145,30 +145,446 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [])
 
+  /* ===== GSAP: All section animations ===== */
+  useGSAP(() => {
+    // =============================================
+    // HERO — Entrance Timeline
+    // =============================================
+    const heroTl = gsap.timeline({ delay: 0.2 })
+
+    // Badge entrance
+    heroTl.from('.hero__badge', {
+      autoAlpha: 0,
+      scale: 0.8,
+      y: 20,
+      duration: 0.6,
+      ease: 'back.out(1.7)',
+    })
+
+    // Particles float animation
+    const particles = document.querySelectorAll('.hero__particle')
+    particles.forEach((p, i) => {
+      gsap.to(p, {
+        y: `-=${30 + Math.random() * 40}`,
+        x: `+=${Math.random() * 20 - 10}`,
+        autoAlpha: 0.6,
+        scale: 1,
+        duration: 4 + Math.random() * 6,
+        repeat: -1,
+        yoyo: true,
+        delay: Math.random() * 3,
+        ease: 'sine.inOut',
+      })
+    })
+
+    // Floating orbs
+    gsap.to('.hero__orb--1', {
+      y: 20, x: -10, duration: 8, repeat: -1, yoyo: true, ease: 'sine.inOut',
+    })
+    gsap.to('.hero__orb--2', {
+      y: -25, x: 5, duration: 10, repeat: -1, yoyo: true, ease: 'sine.inOut',
+    })
+
+    // Scroll indicator
+    gsap.from('.hero__scroll-indicator', {
+      autoAlpha: 0, duration: 0.6, delay: 2.5,
+    })
+    gsap.to('.hero__scroll-line', {
+      scaleY: [0, 1, 0],
+      y: [0, 0, 20],
+      duration: 2,
+      repeat: -1,
+      ease: 'sine.inOut',
+      keyframes: [
+        { scaleY: 0, y: 0, duration: 0.6 },
+        { scaleY: 1, y: 0, duration: 0.6 },
+        { scaleY: 0, y: 20, duration: 0.8 },
+      ]
+    })
+
+    // Hero content parallax on scroll
+    gsap.to('.hero__content', {
+      y: 150,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+
+    // Hero overall fade on scroll
+    gsap.to('.hero__bg', {
+      scale: 1.15,
+      autoAlpha: 0,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+
+    // =============================================
+    // TRUST SIGNALS — Batch reveal + Marquee
+    // =============================================
+    gsap.from('.trust__stats', {
+      autoAlpha: 0,
+      y: 50,
+      duration: 0.8,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.trust',
+        start: 'top 80%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // GSAP-driven infinite marquee (replacing CSS animation)
+    const marqueeInner = document.querySelector('.trust__marquee')
+    if (marqueeInner) {
+      // Calculate total width and set up infinite loop
+      gsap.to(marqueeInner, {
+        xPercent: -50,
+        duration: 25,
+        repeat: -1,
+        ease: 'none',
+      })
+    }
+
+    // =============================================
+    // SOLUTIONS — Parallax background + scroll entrance
+    // =============================================
+    gsap.to('.solutions', {
+      backgroundPositionY: '30%',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.solutions',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+
+    // =============================================
+    // SERVICES — Section parallax + hover setup
+    // =============================================
+    gsap.from('.services', {
+      backgroundPositionY: '-20%',
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.services',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+
+    // =============================================
+    // FEATURED PROJECTS — Project card image reveal
+    // =============================================
+    gsap.from('.featured__showcase', {
+      autoAlpha: 0,
+      y: 60,
+      duration: 1,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.featured',
+        start: 'top 75%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Tab entrance animations
+    const tabs = document.querySelectorAll('.featured__tab')
+    gsap.from(tabs, {
+      autoAlpha: 0,
+      x: -30,
+      duration: 0.5,
+      stagger: 0.08,
+      ease: 'power2.out',
+      scrollTrigger: {
+        trigger: '.featured',
+        start: 'top 75%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // =============================================
+    // AWARDS — Icon spin + batch entrance
+    // =============================================
+    const awardIcons = document.querySelectorAll('.awards__icon')
+    awardIcons.forEach((icon) => {
+      gsap.from(icon, {
+        rotation: -180,
+        scale: 0,
+        duration: 0.6,
+        ease: 'back.out(1.7)',
+        scrollTrigger: {
+          trigger: icon,
+          start: 'top 88%',
+          toggleActions: 'play none none none',
+        },
+      })
+    })
+
+    // =============================================
+    // EXPERIENCE CENTRES — Video section + photo parallax
+    // =============================================
+    const centreImages = document.querySelectorAll('.centres__image')
+    centreImages.forEach((img) => {
+      gsap.from(img, {
+        scale: 1.2,
+        duration: 1.5,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: img,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+        },
+      })
+    })
+
+    // Video playback tied to scroll
+    const videoEl = document.querySelector('.centres__video')
+    if (videoEl) {
+      ScrollTrigger.create({
+        trigger: '.centres__video-wrapper',
+        start: 'top 80%',
+        end: 'bottom 20%',
+        onEnter: () => videoEl.play(),
+        onLeave: () => videoEl.pause(),
+        onEnterBack: () => videoEl.play(),
+        onLeaveBack: () => videoEl.pause(),
+      })
+    }
+
+    // =============================================
+    // PROCESS TIMELINE — Scrub-linked line fill
+    // =============================================
+    gsap.from('.process__line-fill', {
+      scaleX: 0,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.process__timeline',
+        start: 'top 75%',
+        end: 'bottom 60%',
+        scrub: 1,
+      },
+    })
+
+    // Step-by-step reveal
+    const processSteps = document.querySelectorAll('.process__step')
+    gsap.from(processSteps, {
+      autoAlpha: 0,
+      y: 40,
+      duration: 0.6,
+      stagger: 0.15,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.process__timeline',
+        start: 'top 75%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Dot pulse animations
+    const dots = document.querySelectorAll('.process__step-dot-inner')
+    dots.forEach((dot, i) => {
+      gsap.to(dot, {
+        scale: 1.5,
+        duration: 1.2,
+        repeat: -1,
+        yoyo: true,
+        delay: i * 0.3,
+        ease: 'sine.inOut',
+      })
+    })
+
+    // Step numbers: toggleClass on scroll
+    processSteps.forEach((step) => {
+      ScrollTrigger.create({
+        trigger: step,
+        start: 'top 70%',
+        toggleClass: { targets: step, className: 'process__step--active' },
+      })
+    })
+
+    // =============================================
+    // TESTIMONIALS — Quote mark animation + batch
+    // =============================================
+    const quoteMarks = document.querySelectorAll('.testimonials__quote-mark')
+    gsap.from(quoteMarks, {
+      autoAlpha: 0,
+      scale: 0,
+      rotation: -20,
+      duration: 0.6,
+      stagger: 0.15,
+      ease: 'back.out(1.7)',
+      scrollTrigger: {
+        trigger: '.testimonials',
+        start: 'top 80%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Star animations
+    const stars = document.querySelectorAll('.testimonials__stars svg')
+    gsap.from(stars, {
+      autoAlpha: 0,
+      scale: 0,
+      duration: 0.3,
+      stagger: 0.05,
+      ease: 'back.out(2)',
+      scrollTrigger: {
+        trigger: '.testimonials',
+        start: 'top 80%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Avatar scale
+    const avatars = document.querySelectorAll('.testimonials__avatar')
+    gsap.from(avatars, {
+      scale: 0,
+      duration: 0.5,
+      stagger: 0.15,
+      delay: 0.3,
+      ease: 'back.out(1.7)',
+      scrollTrigger: {
+        trigger: '.testimonials',
+        start: 'top 80%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // =============================================
+    // FINAL CTA — Parallax glow + entrance timeline
+    // =============================================
+    gsap.to('.final-cta__glow', {
+      y: -100,
+      scale: 1.3,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.final-cta',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: true,
+      },
+    })
+
+    // CTA entrance
+    const ctaTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '.final-cta',
+        start: 'top 80%',
+        toggleActions: 'play none none none',
+      },
+    })
+    ctaTl.from('.final-cta__card', {
+      autoAlpha: 0,
+      y: 50,
+      duration: 0.8,
+      ease: 'power3.out',
+    })
+    .from('.final-cta__buttons .btn', {
+      autoAlpha: 0,
+      y: 20,
+      scale: 0.9,
+      duration: 0.5,
+      stagger: 0.15,
+      ease: 'back.out(1.7)',
+    }, '-=0.3')
+
+    // =============================================
+    // RESPONSIVE — gsap.matchMedia
+    // =============================================
+    const mm = gsap.matchMedia()
+    mm.add({
+      isDesktop: '(min-width: 1024px)',
+      isMobile: '(max-width: 1023px)',
+      reduceMotion: '(prefers-reduced-motion: reduce)',
+    }, (context) => {
+      const { isDesktop, reduceMotion } = context.conditions
+
+      if (reduceMotion) {
+        // Kill all ScrollTriggers and skip animations for a11y
+        ScrollTrigger.getAll().forEach(st => st.kill())
+        gsap.globalTimeline.clear()
+        return
+      }
+
+      if (isDesktop) {
+        // Desktop-only: Service card icon hover lift
+        document.querySelectorAll('.services__card').forEach((card) => {
+          const icon = card.querySelector('.services__icon')
+          if (icon) {
+            card.addEventListener('mouseenter', () => {
+              gsap.to(icon, { y: -4, boxShadow: '0 8px 30px rgba(201, 169, 110, 0.15)', duration: 0.3, ease: 'power2.out' })
+            })
+            card.addEventListener('mouseleave', () => {
+              gsap.to(icon, { y: 0, boxShadow: 'none', duration: 0.3, ease: 'power2.out' })
+            })
+          }
+        })
+      }
+    })
+
+  }, { scope: homeRef })
+
+  // Handle project transition animations with GSAP
+  const prevProjectRef = useRef(0)
+  useEffect(() => {
+    const detail = document.querySelector('.featured__detail')
+    if (!detail) return
+
+    const tl = gsap.timeline()
+    tl.fromTo(detail,
+      { autoAlpha: 0, y: 20, filter: 'blur(10px)' },
+      { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.5, ease: 'power3.out' }
+    )
+
+    const detailName = detail.querySelector('.featured__detail-name')
+    if (detailName) {
+      tl.from(detailName, { autoAlpha: 0, x: 20, duration: 0.4, ease: 'power2.out' }, '-=0.3')
+    }
+
+    const uspItems = detail.querySelectorAll('.featured__usp')
+    if (uspItems.length) {
+      tl.from(uspItems, { autoAlpha: 0, y: 10, stagger: 0.08, duration: 0.3, ease: 'power2.out' }, '-=0.2')
+    }
+
+    const detailDesc = detail.querySelector('.featured__detail-desc')
+    if (detailDesc) {
+      tl.from(detailDesc, { autoAlpha: 0, duration: 0.3 }, '-=0.1')
+    }
+
+    prevProjectRef.current = activeProject
+  }, [activeProject])
+
   return (
-    <>
+    <div ref={homeRef}>
       <Helmet>
         <title>ATPL - Intelligent Automation for Luxury Living & Smart Spaces</title>
         <meta name="description" content="Transforming homes, hotels, and commercial spaces with cutting-edge automation since 2002. 20+ years, 1000+ projects, 50+ cities." />
       </Helmet>
 
       <CursorGlow />
-      
-      {/* ===== GLOBAL CINEMATIC BACKGROUND ===== */}
-      <motion.div 
+
+      {/* ===== GLOBAL CINEMATIC BACKGROUND (Framer Motion for canvas scrub) ===== */}
+      <motion.div
         className="global-background"
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: 0, left: 0, right: 0, bottom: 0,
           zIndex: -2,
           overflow: 'hidden',
-          backgroundColor: 'var(--color-bg-primary)'
+          backgroundColor: '#0a0a0a',
         }}
       >
-        <motion.canvas 
+        <motion.canvas
           ref={canvasRef}
           style={{
             width: '100%',
@@ -177,71 +593,44 @@ export default function Home() {
             opacity: globalBgOpacity,
             scale: globalBgScale,
             y: globalBgY,
-            filter: 'brightness(1)'
+            filter: 'brightness(1)',
           }}
         />
-        {/* Adds a gradient mask so the edges fade into the dark background */}
         <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to bottom, rgba(10,10,10,0.1) 0%, var(--color-bg-primary) 100%)',
-          pointerEvents: 'none'
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(10,10,10,0.1) 0%, #0a0a0a 100%)',
+          pointerEvents: 'none',
         }} />
       </motion.div>
 
       {/* ===== HERO ===== */}
       <section className="hero" ref={heroRef} id="hero">
-        <motion.div className="hero__bg" style={{ scale: heroScale, opacity: heroOpacity }}>
+        <div className="hero__bg">
           <div className="hero__glass-screen" />
           <div className="hero__grid-lines" />
           <div className="hero__particles">
             {[...Array(30)].map((_, i) => (
-              <motion.div
+              <div
                 key={i}
                 className="hero__particle"
-                animate={{
-                  y: [0, -30 - Math.random() * 40, 0],
-                  x: [0, Math.random() * 20 - 10, 0],
-                  opacity: [0, 0.6, 0],
-                  scale: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 4 + Math.random() * 6,
-                  repeat: Infinity,
-                  delay: Math.random() * 3,
-                  ease: 'easeInOut',
-                }}
                 style={{
                   left: `${Math.random() * 100}%`,
                   top: `${Math.random() * 100}%`,
                   width: `${2 + Math.random() * 3}px`,
                   height: `${2 + Math.random() * 3}px`,
+                  opacity: 0,
                 }}
               />
             ))}
           </div>
-          {/* Floating accent orbs */}
-          <motion.div
-            className="hero__orb hero__orb--1"
-            animate={{ y: [-20, 20, -20], x: [10, -10, 10] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <motion.div
-            className="hero__orb hero__orb--2"
-            animate={{ y: [15, -25, 15], x: [-15, 5, -15] }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        </motion.div>
+          <div className="hero__orb hero__orb--1" />
+          <div className="hero__orb hero__orb--2" />
+        </div>
 
-        <motion.div className="hero__content container" style={{ y: heroY }}>
-          <motion.div
-            className="hero__badge"
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
+        <div className="hero__content container">
+          <div className="hero__badge" style={{ visibility: 'hidden' }}>
             <Sparkles size={14} /> Since 2002
-          </motion.div>
+          </div>
 
           <h1 className="hero__title">
             <span className="hero__title-line"><CharReveal delay={0.4}>The Future of</CharReveal></span>
@@ -263,11 +652,6 @@ export default function Home() {
                 <Link to="/contact" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit' }}>
                   Book a Free Consultation <ArrowRight size={18} />
                 </Link>
-                <motion.div
-                  className="shimmer-btn__shimmer"
-                  animate={{ x: ['-100%', '250%'] }}
-                  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2, ease: 'linear' }}
-                />
               </MagneticButton>
               <MagneticButton className="btn btn-secondary btn-lg" strength={0.15}>
                 <Link to="/projects" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit' }}>
@@ -276,21 +660,12 @@ export default function Home() {
               </MagneticButton>
             </div>
           </BlurFade>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="hero__scroll-indicator"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2.5 }}
-        >
+        <div className="hero__scroll-indicator" style={{ visibility: 'hidden' }}>
           <span className="hero__scroll-text">Scroll</span>
-          <motion.div
-            className="hero__scroll-line"
-            animate={{ scaleY: [0, 1, 0], y: [0, 0, 20] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        </motion.div>
+          <div className="hero__scroll-line" />
+        </div>
       </section>
 
       {/* ===== TRUST SIGNALS ===== */}
@@ -322,7 +697,7 @@ export default function Home() {
             <div className="trust__brands">
               <p className="trust__brands-label">Trusted by Top Brands</p>
               <div className="trust__marquee-container">
-                <div className="trust__marquee">
+                <div className="trust__marquee" ref={marqueeRef}>
                   {[...brands, ...brands, ...brands].map((b, i) => (
                     <span key={i} className="trust__brand">{b}</span>
                   ))}
@@ -345,13 +720,21 @@ export default function Home() {
 
           <StaggerContainer className="solutions__grid" staggerDelay={0.15} delay={0.2}>
             {[
-              { icon: HomeIcon, title: 'Residential', desc: 'Transform your home into an intelligent sanctuary. Personalized automation for lighting, climate, entertainment, and security — engineered for your lifestyle.' },
-              { icon: Hotel, title: 'Hospitality', desc: 'Elevate guest experiences with seamless room automation, energy management, and intuitive controls that define five-star luxury.' },
-              { icon: Building2, title: 'Commercial', desc: 'Smart building solutions for offices, retail, and co-working spaces. Boost productivity, reduce costs, and future-proof your infrastructure.' },
+              { icon: HomeIcon, title: 'Residential', desc: 'Transform your home into an intelligent sanctuary. Personalized automation for lighting, climate, entertainment, and security — engineered for your lifestyle.', img: '_PAB2828-HDR.jpg' },
+              { icon: Hotel, title: 'Hospitality', desc: 'Elevate guest experiences with seamless room automation, energy management, and intuitive controls that define five-star luxury.', img: '_PAB2918-HDR.jpg' },
+              { icon: Building2, title: 'Commercial', desc: 'Smart building solutions for offices, retail, and co-working spaces. Boost productivity, reduce costs, and future-proof your infrastructure.', img: '_PAB3085-HDR.jpg' },
             ].map((s) => (
               <StaggerItem key={s.title}>
                 <TiltCard maxTilt={6}>
                   <div className="solutions__card glass-card">
+                    <div className="solutions__card-image">
+                      <img
+                        src={`${import.meta.env.BASE_URL}media/photos/${s.img}`}
+                        alt={s.title}
+                        loading="lazy"
+                      />
+                      <div className="solutions__card-image-overlay" />
+                    </div>
                     <div className="solutions__icon-wrapper">
                       <s.icon size={28} />
                     </div>
@@ -424,12 +807,10 @@ export default function Home() {
               {/* Project Tabs */}
               <div className="featured__tabs">
                 {projects.map((p, i) => (
-                  <motion.button
+                  <button
                     key={p.name}
                     className={`featured__tab ${activeProject === i ? 'featured__tab--active' : ''}`}
                     onClick={() => setActiveProject(i)}
-                    whileHover={{ x: 8 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
                   >
                     <span className="featured__tab-num">{String(i + 1).padStart(2, '0')}</span>
                     <div className="featured__tab-info">
@@ -438,71 +819,44 @@ export default function Home() {
                     </div>
                     <ArrowUpRight size={16} className="featured__tab-arrow" />
                     {activeProject === i && (
-                      <motion.div className="featured__tab-indicator" layoutId="project-indicator" />
+                      <div className="featured__tab-indicator" />
                     )}
-                  </motion.button>
+                  </button>
                 ))}
               </div>
 
               {/* Active Project Detail */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeProject}
-                  className="featured__detail"
-                  initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <div className="featured__detail-image">
-                    <div className="featured__detail-placeholder">
-                      <Building2 size={64} strokeWidth={0.8} />
-                    </div>
-                    <span className="featured__type-badge">{projects[activeProject].type}</span>
-                    <div className="featured__detail-overlay" />
+              <div className="featured__detail" key={activeProject}>
+                <div className="featured__detail-image">
+                  <img
+                    src={`${import.meta.env.BASE_URL}media/photos/${projects[activeProject].img}`}
+                    alt={projects[activeProject].name}
+                    className="featured__detail-photo"
+                  />
+                  <span className="featured__type-badge">{projects[activeProject].type}</span>
+                  <div className="featured__detail-overlay" />
+                </div>
+                <div className="featured__detail-info">
+                  <h3 className="featured__detail-name">
+                    {projects[activeProject].name}
+                  </h3>
+                  <div className="featured__usps">
+                    {projects[activeProject].usps.map((u, j) => (
+                      <span key={u} className="featured__usp">
+                        <CheckCircle2 size={13} /> {u}
+                      </span>
+                    ))}
                   </div>
-                  <div className="featured__detail-info">
-                    <motion.h3
-                      className="featured__detail-name"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      {projects[activeProject].name}
-                    </motion.h3>
-                    <div className="featured__usps">
-                      {projects[activeProject].usps.map((u, j) => (
-                        <motion.span
-                          key={u}
-                          className="featured__usp"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 + j * 0.1 }}
-                        >
-                          <CheckCircle2 size={13} /> {u}
-                        </motion.span>
-                      ))}
-                    </div>
-                    <motion.p
-                      className="featured__detail-desc"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      {projects[activeProject].desc}
-                    </motion.p>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                    >
-                      <Link to="/projects" className="btn btn-secondary btn-sm" style={{ marginTop: 20 }}>
-                        View Project <ArrowUpRight size={14} />
-                      </Link>
-                    </motion.div>
+                  <p className="featured__detail-desc">
+                    {projects[activeProject].desc}
+                  </p>
+                  <div style={{ marginTop: 20 }}>
+                    <Link to="/projects" className="btn btn-secondary btn-sm">
+                      View Project <ArrowUpRight size={14} />
+                    </Link>
                   </div>
-                </motion.div>
-              </AnimatePresence>
+                </div>
+              </div>
 
               {/* Progress dots */}
               <div className="featured__dots">
@@ -595,13 +949,36 @@ export default function Home() {
             </p>
           </BlurFade>
 
+          {/* Video Showcase */}
+          <BlurFade delay={0.2}>
+            <div className="centres__video-wrapper">
+              <video
+                className="centres__video"
+                src={`${import.meta.env.BASE_URL}media/videos/experience-lights.mp4`}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+              <div className="centres__video-overlay">
+                <Play size={64} strokeWidth={1} />
+                <span className="centres__video-caption">Mumbai Experience Centre</span>
+              </div>
+            </div>
+          </BlurFade>
+
           <StaggerContainer className="centres__grid" staggerDelay={0.15}>
             {centers.map((c) => (
               <StaggerItem key={c.city}>
                 <TiltCard maxTilt={4}>
                   <div className="centres__card glass-card">
-                    <div className="centres__image-placeholder">
-                      <MapPin size={32} strokeWidth={1} />
+                    <div className="centres__image-container">
+                      <img
+                        src={`${import.meta.env.BASE_URL}media/photos/${c.img}`}
+                        alt={`${c.city} Experience Centre`}
+                        className="centres__image"
+                        loading="lazy"
+                      />
                     </div>
                     <div className="centres__info">
                       <h3 className="centres__city">{c.city}</h3>
@@ -632,37 +1009,25 @@ export default function Home() {
 
           <div className="process__timeline">
             <div className="process__line">
-              <motion.div
-                className="process__line-fill"
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-              />
+              <div className="process__line-fill" ref={processLineRef} />
             </div>
-            <StaggerContainer className="process__steps" staggerDelay={0.15}>
+            <div className="process__steps">
               {steps.map((s, i) => (
-                <StaggerItem key={s.num}>
-                  <div className="process__step">
-                    <div className="process__step-dot">
-                      <motion.div
-                        className="process__step-dot-inner"
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                      />
-                    </div>
-                    <div className="process__step-number">{s.num}</div>
-                    <h3 className="process__step-title">{s.title}</h3>
-                    <p className="process__step-desc">{s.desc}</p>
+                <div key={s.num} className="process__step">
+                  <div className="process__step-dot">
+                    <div className="process__step-dot-inner" />
                   </div>
-                </StaggerItem>
+                  <div className="process__step-number">{s.num}</div>
+                  <h3 className="process__step-title">{s.title}</h3>
+                  <p className="process__step-desc">{s.desc}</p>
+                </div>
               ))}
-            </StaggerContainer>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ===== TESTIMONIALS - CAROUSEL ===== */}
+      {/* ===== TESTIMONIALS ===== */}
       <section className="testimonials section" id="testimonials">
         <div className="container">
           <BlurFade>
@@ -729,6 +1094,6 @@ export default function Home() {
           </BlurFade>
         </div>
       </section>
-    </>
+    </div>
   )
 }

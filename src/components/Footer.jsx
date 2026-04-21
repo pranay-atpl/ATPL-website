@@ -1,11 +1,98 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Phone, MapPin, ExternalLink, Globe } from 'lucide-react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
+import { Mail, Phone, MapPin } from 'lucide-react'
 import './Footer.css'
 
 export default function Footer() {
+  const footerRef = useRef(null)
+
+  useGSAP(() => {
+    // Staggered column reveals
+    const cols = footerRef.current.querySelectorAll('.footer__brand, .footer__col')
+    gsap.from(cols, {
+      autoAlpha: 0,
+      y: 40,
+      duration: 0.7,
+      stagger: 0.12,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: footerRef.current,
+        start: 'top 85%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Footer links stagger
+    const links = footerRef.current.querySelectorAll('.footer__link')
+    gsap.from(links, {
+      autoAlpha: 0,
+      x: -15,
+      duration: 0.4,
+      stagger: 0.03,
+      delay: 0.3,
+      ease: 'power2.out',
+      scrollTrigger: {
+        trigger: footerRef.current,
+        start: 'top 85%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Social icons entrance with bounce
+    const socials = footerRef.current.querySelectorAll('.footer__social-link')
+    gsap.from(socials, {
+      autoAlpha: 0,
+      scale: 0,
+      duration: 0.5,
+      stagger: 0.1,
+      delay: 0.5,
+      ease: 'back.out(1.7)',
+      scrollTrigger: {
+        trigger: footerRef.current,
+        start: 'top 85%',
+        toggleActions: 'play none none none',
+      },
+    })
+
+    // Bottom bar slide in
+    const bottomBar = footerRef.current.querySelector('.footer__bottom')
+    if (bottomBar) {
+      gsap.from(bottomBar, {
+        autoAlpha: 0,
+        y: 20,
+        duration: 0.6,
+        delay: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: footerRef.current,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+        },
+      })
+    }
+
+    // Divider line animation
+    const divider = footerRef.current.querySelector('.divider')
+    if (divider) {
+      gsap.from(divider, {
+        scaleX: 0,
+        duration: 1,
+        delay: 0.4,
+        ease: 'power2.inOut',
+        scrollTrigger: {
+          trigger: footerRef.current,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+        },
+      })
+    }
+  }, { scope: footerRef })
+
   return (
-    <footer className="footer">
+    <footer className="footer" ref={footerRef}>
       <div className="container">
         <div className="footer__grid">
           <div className="footer__brand">
